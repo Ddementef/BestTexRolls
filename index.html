@@ -103,40 +103,35 @@
             font-size: 1em;
         }
 
-        @media (max-width: 480px) {
-            body {
-                flex-direction: column;
-                justify-content: flex-start;
-                align-items: center;
-                padding: 10px;
-                background-color: #ffffff;
-            }
+        @media (max-width: 768px) {
             .container {
-                padding: 15px;
-                width: 100%;
-                max-width: none;
-                background-color: rgba(255, 255, 255, 0.9);
-                border-radius: 0;
-                box-shadow: none;
-                margin-top: 0;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-            }
-            .container img {
-                display: none;
+                padding: 20px;
             }
             .container h1 {
-                font-size: 1.5em;
-                margin-top: 20px;
+                font-size: 1.2em;
             }
             .container input, .container button {
-                font-size: 1em;
-                padding: 10px;
+                font-size: 0.9em;
+                padding: 8px;
             }
             .container .result {
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            .container h1 {
                 font-size: 1em;
+            }
+            .container input, .container button {
+                font-size: 0.8em;
+                padding: 6px;
+            }
+            .container .result {
+                font-size: 0.8em;
             }
         }
     </style>
@@ -160,6 +155,7 @@
         
         <div class="result" id="result"></div>
     </div>
+
     <script>
         function findOptimalCombination(rolls, target) {
             const n = rolls.length;
@@ -215,7 +211,7 @@
                 document.getElementById("result").textContent = "Оптимальная комбинация рулонов: не найдено";
             } else {
                 const totalLength = optimalCombination.reduce((sum, roll) => sum + roll, 0);
-                const resultText = `Оптимальная комбинация рулонов: ${optimalCombination.join(", ")}\nСуммарная длина: ${parseFloat(totalLength.toFixed(3)).toString()} метров`;
+                const resultText = Оптимальная комбинация рулонов: ${optimalCombination.join(", ")}\nСуммарная длина: ${parseFloat(totalLength.toFixed(3)).toString()} метров;
                 document.getElementById("result").textContent = resultText;
             }
         }

@@ -6,6 +6,7 @@
     <title>Подбор рулонов</title>
     <link rel="icon" href="https://besttexmsk.ru/favicon.ico" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: 'Roboto', Arial, sans-serif;
@@ -24,10 +25,11 @@
             width: 400px;
             max-width: 90%;
             text-align: center;
+            position: relative;
         }
         .container img {
             display: block;
-            margin: 0 auto 20px auto;
+            margin: 0 auto 20px;
             width: 150px;
             max-width: 100%;
         }
@@ -58,7 +60,7 @@
             opacity: 0;
             transition: opacity 0.3s;
             font-size: 0.9em;
-            margin-left: 10px; /* Подсказка ближе к строкам */
+            margin-left: 10px;
         }
         .tooltip::after {
             content: "";
@@ -102,7 +104,35 @@
             color: #333;
             font-size: 1em;
         }
-
+        .container .toggle-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background-color 0.3s ease;
+        }
+        .container .toggle-btn:hover {
+            background-color: #388e3c;
+        }
+        .container .weight, .container .length {
+            display: none;
+        }
+        .container.show-weight .weight {
+            display: block;
+        }
+        .container.show-length .length {
+            display: block;
+        }
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -118,7 +148,6 @@
                 font-size: 0.9em;
             }
         }
-
         @media (max-width: 480px) {
             .container {
                 padding: 15px;
@@ -137,94 +166,116 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container show-length">
         <img src="https://besttexmsk.ru/wp-content/webp-express/webp-images/uploads/2022/12/logotype.jpg.webp" alt="Логотип">
         <h1>Подбор рулонов</h1>
         
-        <label for="target">Целевая длина (м):
-            <input type="text" id="target" onkeypress="restrictInput(event, 'target')">
-            <span class="tooltip">Укажите необходимую для подбора длину</span>
-        </label>
+        <div class="length">
+            <label for="targetLength">Целевая длина (м):
+                <input type="text" id="targetLength" onkeypress="restrictInput(event, 'target')">
+                <span class="tooltip">Укажите необходимую для подбора длину</span>
+            </label>
+            
+            <label for="rollsLength">Список рулонов (м, через пробел):
+                <input type="text" id="rollsLength" onkeypress="restrictInput(event, 'rolls')">
+                <span class="tooltip">Вставьте скопированный список метражей из базы</span>
+            </label>
+        </div>
         
-        <label for="rolls">Список рулонов (м, через пробел):
-            <input type="text" id="rolls" onkeypress="restrictInput(event, 'rolls')">
-            <span class="tooltip">Вставьте скопированный список метражей из базы</span>
-        </label>
-        
+        <div class="weight">
+            <label for="targetWeight">Целевой вес (кг):
+                <input type="text" id="targetWeight" onkeypress="restrictInput(event, 'target')">
+                <span class="tooltip">Укажите необходимый для подбора вес</span>
+            </label>
+            
+            <label for="rollsWeight">Список рулонов (кг, через пробел):
+                <input type="text" id="rollsWeight" onkeypress="restrictInput(event, 'rolls')">
+                <span class="tooltip">Вставьте скопированный список весов из базы</span>
+            </label>
+        </div>
+
         <button onclick="calculate()">Рассчитать</button>
         
         <div class="result" id="result"></div>
+
+        <button class="toggle-btn" onclick="toggleCalculation()">
+            <i class="fas fa-exchange-alt"></i>
+        </button>
     </div>
 
-    <script>
-        function findOptimalCombination(rolls, target) {
-            const n = rolls.length;
-            const targetInMM = target * 1000;
-            const dp = Array(targetInMM + 1).fill(0);
-            const choice = Array(targetInMM + 1).fill(-1);
+<script>
+    let isWeightMode = false;
 
-            for (let i = 0; i < n; i++) {
-                const rollInMM = rolls[i] * 1000;
-                for (let j = targetInMM; j >= rollInMM; j--) {
-                    if (dp[j - rollInMM] + rollInMM > dp[j]) {
-                        dp[j] = dp[j - rollInMM] + rollInMM;
-                        choice[j] = i;
-                    }
+    function findOptimalCombination(rolls, target, isWeightMode) {
+        const targetInUnits = target * 1000;
+        const dp = Array(targetInUnits + 1).fill(0);
+        const choice = Array(targetInUnits + 1).fill(-1);
+
+        rolls.forEach((roll, i) => {
+            const rollInUnits = roll * 1000;
+            for (let j = targetInUnits; j >= rollInUnits; j--) {
+                if (dp[j - rollInUnits] + rollInUnits > dp[j]) {
+                    dp[j] = dp[j - rollInUnits] + rollInUnits;
+                    choice[j] = i;
                 }
             }
+        });
 
-            let bestSum = dp[targetInMM];
-            const result = [];
-            while (bestSum > 0 && choice[bestSum] != -1) {
-                result.push(rolls[choice[bestSum]]);
-                bestSum -= rolls[choice[bestSum]] * 1000;
-            }
-
-            // Сортировка от большего к меньшему
-            result.sort((a, b) => b - a);
-
-            return result;
+        let bestSum = dp[targetInUnits];
+        const result = [];
+        while (bestSum > 0 && choice[bestSum] !== -1) {
+            result.push(rolls[choice[bestSum]]);
+            bestSum -= rolls[choice[bestSum]] * 1000;
         }
 
-        function calculate() {
-            const targetInput = document.getElementById("target").value.replace(',', '.').trim();
-            const rollsInput = document.getElementById("rolls").value.replace(/,/g, '.').trim();
-            
-            if (targetInput === "" && rollsInput === "") {
-                document.getElementById("result").textContent = "Пожалуйста, заполните все поля.";
-                return;
-            }
-            if (targetInput === "") {
-                document.getElementById("result").textContent = "Пожалуйста, заполните поле целевой длины.";
-                return;
-            }
-            if (rollsInput === "") {
-                document.getElementById("result").textContent = "Пожалуйста, заполните поле списка рулонов.";
-                return;
-            }
+        return result.sort((a, b) => b - a);
+    }
 
-            const target = parseFloat(targetInput);
-            const rolls = rollsInput.split(/\s+/).map(item => parseFloat(item));
-            const optimalCombination = findOptimalCombination(rolls, target);
-
-            if (optimalCombination.length === 0) {
-                document.getElementById("result").textContent = "Оптимальная комбинация рулонов: не найдено";
-            } else {
-                const totalLength = optimalCombination.reduce((sum, roll) => sum + roll, 0);
-                const resultText = Оптимальная комбинация рулонов: ${optimalCombination.join(", ")}\nСуммарная длина: ${parseFloat(totalLength.toFixed(3)).toString()} метров;
-                document.getElementById("result").textContent = resultText;
-            }
+    function calculate() {
+        const targetInput = document.getElementById(isWeightMode ? "targetWeight" : "targetLength").value.replace(',', '.').trim();
+        const rollsInput = document.getElementById(isWeightMode ? "rollsWeight" : "rollsLength").value.replace(/,/g, '.').trim();
+        
+        if (!targetInput || !rollsInput) {
+            document.getElementById("result").textContent = "Пожалуйста, заполните все поля.";
+            return;
         }
 
-        function restrictInput(event, field) {
-            const char = String.fromCharCode(event.which);
-            if (field === 'rolls' && !/[0-9\s.,]/.test(char)) {
-                event.preventDefault();
-            }
-            if (field === 'target' && !/[0-9.,]/.test(char)) {
-                event.preventDefault();
-            }
+        const target = parseFloat(targetInput);
+        const rolls = rollsInput.split(/\s+/).map(parseFloat);
+        const optimalCombination = findOptimalCombination(rolls, target, isWeightMode);
+
+        if (optimalCombination.length === 0) {
+            document.getElementById("result").textContent = "Не найдена оптимальная комбинация рулонов";
+        } else {
+            const totalSum = optimalCombination.reduce((sum, roll) => sum + roll, 0);
+            const formattedSum = parseFloat(totalSum.toFixed(3)); // Убирает лишние нули в дробной части
+            const resultText = `Оптимальная комбинация рулонов: ${optimalCombination.join(", ")}\n${isWeightMode ? 'Суммарный вес' : 'Суммарная длина'}: ${formattedSum} ${isWeightMode ? 'кг' : 'метров'}\nВсего рулонов: ${optimalCombination.length}`;
+            document.getElementById("result").textContent = resultText;
         }
-    </script>
+    }
+
+    function restrictInput(event, type) {
+        const char = String.fromCharCode(event.which);
+        if (!/[0-9\s.,]/.test(char)) {
+            event.preventDefault();
+        }
+    }
+
+    function toggleCalculation() {
+        isWeightMode = !isWeightMode;
+        document.querySelector('.container').classList.toggle('show-weight');
+        document.querySelector('.container').classList.toggle('show-length');
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            calculate();
+        }
+    });
+
+    document.querySelector('.toggle-btn i').className = 'fas fa-exchange-alt';
+</script>
+
 </body>
 </html>

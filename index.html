@@ -251,37 +251,47 @@ details p {
     const dp = Array(targetInUnits + 1).fill(0);
     const choices = Array(targetInUnits + 1).fill().map(() => []);
 
+    const MAX_COMBINATIONS = 100;  // Лимит на количество комбинаций
+    let resultCount = 0;  // Счётчик комбинаций
+
     rolls.forEach((roll, i) => {
         const rollInUnits = roll * 1000;
         for (let j = targetInUnits; j >= rollInUnits; j--) {
             if (dp[j - rollInUnits] + rollInUnits >= dp[j]) {
                 if (dp[j - rollInUnits] + rollInUnits > dp[j]) {
                     dp[j] = dp[j - rollInUnits] + rollInUnits;
-                    choices[j] = [...choices[j - rollInUnits], rolls[i]];
-                } else if (dp[j - rollInUnits] + rollInUnits === dp[j] && !choices[j].includes(rolls[i])) {
-                    choices[j] = [...choices[j], rolls[i]];
+                    choices[j] = [...choices[j - rollInUnits], { roll: rolls[i], index: i }];
+                } else if (dp[j - rollInUnits] + rollInUnits === dp[j]) {
+                    choices[j].push({ roll: rolls[i], index: i });
                 }
             }
         }
     });
 
     let bestSum = dp[targetInUnits];
-    const resultVariants = new Set();
+    const resultVariants = [];
 
-    function findCombinations(sum, currentCombination) {
+    function findCombinations(sum, currentCombination, usedIndexes) {
+        if (resultCount >= MAX_COMBINATIONS) return;  // Остановка, если достигнут лимит
         if (sum === 0) {
-            resultVariants.add(currentCombination.sort((a, b) => b - a).join(", "));
+            const combination = currentCombination.sort((a, b) => b - a).join(", ");
+            resultVariants.push(combination);  // Сохраняем комбинацию
+            resultCount++;  // Увеличиваем счётчик комбинаций
             return;
         }
 
-        choices[sum].forEach((roll) => {
-            findCombinations(sum - roll * 1000, [...currentCombination, roll]);
+        choices[sum].forEach(({ roll, index }) => {
+            if (!usedIndexes.has(index)) {
+                usedIndexes.add(index);  // Пометить рулон как использованный
+                findCombinations(sum - roll * 1000, [...currentCombination, roll], usedIndexes);
+                usedIndexes.delete(index);  // Убрать отметку после рекурсивного вызова
+            }
         });
     }
 
-    findCombinations(bestSum, []);
+    findCombinations(bestSum, [], new Set());
 
-    return [...resultVariants].sort((a, b) => a.split(', ').length - b.split(', ').length);
+    return resultVariants.sort((a, b) => a.split(', ').length - b.split(', ').length);
 }
 
 function calculate() {
@@ -305,8 +315,9 @@ function calculate() {
         let resultText = `Оптимальная комбинация рулонов: ${bestCombination}\nСуммарная ${isWeightMode ? 'масса' : 'длина'}: ${totalSum.toFixed(3)} ${isWeightMode ? 'кг' : 'метров'}\nВсего рулонов: ${bestCombination.split(', ').length}`;
 
         if (optimalCombinations.length > 1) {
+            const displayedAlternatives = Math.min(optimalCombinations.length - 1, 5);  // Максимум 5 альтернатив
             let alternativesText = '<details><summary class="styled-summary">Альтернативные варианты</summary><div class="alternatives">';
-            optimalCombinations.slice(1).forEach((combination, index) => {
+            optimalCombinations.slice(1, displayedAlternatives + 1).forEach((combination, index) => {
                 const altTotalSum = combination.split(', ').reduce((sum, roll) => sum + parseFloat(roll), 0);
                 const totalRolls = combination.split(', ').length;
                 alternativesText += `<p>${index + 1}) Комбинация: ${combination}<br>Суммарная ${isWeightMode ? 'масса' : 'длина'}: ${altTotalSum.toFixed(3)} ${isWeightMode ? 'кг' : 'метров'}<br>Всего рулонов: ${totalRolls}</p>`;
@@ -318,6 +329,7 @@ function calculate() {
         document.getElementById("result").innerHTML = resultText;
     }
 }
+
 
     function restrictInput(event, type) {
         const char = String.fromCharCode(event.which);

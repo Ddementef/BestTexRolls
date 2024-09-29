@@ -250,8 +250,7 @@ details p {
 <script>
     let isWeightMode = false;
 
-// Функция для поиска оптимальной комбинации с использованием мемоизации и сортировки рулонов
-function findOptimalCombination(rolls, target, isWeightMode) {
+    function findOptimalCombination(rolls, target, isWeightMode) {
     const targetInUnits = target * 1000;
     const dp = Array(targetInUnits + 1).fill(0);
     const choices = Array(targetInUnits + 1).fill().map(() => []);
@@ -264,6 +263,9 @@ function findOptimalCombination(rolls, target, isWeightMode) {
 
     // Мемоизация (запоминаем уже проверенные суммы)
     const memo = {};
+
+    // Список для хранения уникальных комбинаций
+    const uniqueVariants = new Set();
 
     rolls.forEach((roll, i) => {
         const rollInUnits = roll * 1000;
@@ -286,8 +288,11 @@ function findOptimalCombination(rolls, target, isWeightMode) {
         if (resultCount >= MAX_COMBINATIONS) return;  // Остановка, если достигнут лимит
         if (sum === 0) {
             const combination = currentCombination.sort((a, b) => b - a).join(", ");
-            resultVariants.push(combination);  // Сохраняем комбинацию
-            resultCount++;  // Увеличиваем счётчик комбинаций
+            if (!uniqueVariants.has(combination)) {
+                resultVariants.push(combination);  // Сохраняем комбинацию
+                uniqueVariants.add(combination);  // Помечаем комбинацию как уникальную
+                resultCount++;  // Увеличиваем счётчик комбинаций
+            }
             return;
         }
 
@@ -313,6 +318,7 @@ function findOptimalCombination(rolls, target, isWeightMode) {
     return resultVariants.sort((a, b) => a.split(', ').length - b.split(', ').length);
 }
 
+
 function calculate() {
     const targetInput = document.getElementById(isWeightMode ? "targetWeight" : "targetLength").value.replace(',', '.').trim();
     const rollsInput = document.getElementById(isWeightMode ? "rollsWeight" : "rollsLength").value.replace(/,/g, '.').trim();
@@ -336,27 +342,34 @@ function calculate() {
         } else {
             const bestCombination = optimalCombinations[0];
             const totalSum = bestCombination.split(', ').reduce((sum, roll) => sum + parseFloat(roll), 0);
-            let resultText = `Оптимальная комбинация рулонов: ${bestCombination}\nСуммарная ${isWeightMode ? 'масса' : 'длина'}: ${totalSum.toFixed(3)} ${isWeightMode ? 'кг' : 'метров'}\nВсего рулонов: ${bestCombination.split(', ').length}`;
+            
+            // Убедитесь, что totalSum не является NaN, прежде чем создавать текст результата
+            if (isNaN(totalSum)) {
+                document.getElementById("result").textContent = "Не найдена оптимальная комбинация рулонов";
+            } else {
+                let resultText = `Оптимальная комбинация рулонов: ${bestCombination}\nСуммарная ${isWeightMode ? 'масса' : 'длина'}: ${totalSum.toFixed(3)} ${isWeightMode ? 'кг' : 'метров'}\nВсего рулонов: ${bestCombination.split(', ').length}`;
 
-            if (optimalCombinations.length > 1) {
-                const displayedAlternatives = Math.min(optimalCombinations.length - 1, 5);
-                let alternativesText = '<details><summary class="styled-summary">Альтернативные варианты</summary><div class="alternatives">';
-                optimalCombinations.slice(1, displayedAlternatives + 1).forEach((combination, index) => {
-                    const altTotalSum = combination.split(', ').reduce((sum, roll) => sum + parseFloat(roll), 0);
-                    const totalRolls = combination.split(', ').length;
-                    alternativesText += `<p>${index + 1}) Комбинация: ${combination}<br>Суммарная ${isWeightMode ? 'масса' : 'длина'}: ${altTotalSum.toFixed(3)} ${isWeightMode ? 'кг' : 'метров'}<br>Всего рулонов: ${totalRolls}</p>`;
-                });
-                alternativesText += '</div></details>';
-                resultText += '\n\n' + alternativesText;
+                if (optimalCombinations.length > 1) {
+                    const displayedAlternatives = Math.min(optimalCombinations.length - 1, 5);
+                    let alternativesText = '<details><summary class="styled-summary">Альтернативные варианты</summary><div class="alternatives">';
+                    optimalCombinations.slice(1, displayedAlternatives + 1).forEach((combination, index) => {
+                        const altTotalSum = combination.split(', ').reduce((sum, roll) => sum + parseFloat(roll), 0);
+                        const totalRolls = combination.split(', ').length;
+                        alternativesText += `<p>${index + 1}) Комбинация: ${combination}<br>Суммарная ${isWeightMode ? 'масса' : 'длина'}: ${altTotalSum.toFixed(3)} ${isWeightMode ? 'кг' : 'метров'}<br>Всего рулонов: ${totalRolls}</p>`;
+                    });
+                    alternativesText += '</div></details>';
+                    resultText += '\n\n' + alternativesText;
+                }
+
+                document.getElementById("result").innerHTML = resultText;
             }
-
-            document.getElementById("result").innerHTML = resultText;
         }
 
         // Скрыть спиннер после завершения расчёта
         document.getElementById("loadingSpinner").style.display = "none";
     }, 100); // Добавляем небольшую задержку, чтобы спиннер успел появиться
 }
+
 
     function restrictInput(event, type) {
         const char = String.fromCharCode(event.which);

@@ -246,13 +246,20 @@ details p {
 <script>
     let isWeightMode = false;
 
-    function findOptimalCombination(rolls, target, isWeightMode) {
+// Функция для поиска оптимальной комбинации с использованием мемоизации и сортировки рулонов
+function findOptimalCombination(rolls, target, isWeightMode) {
     const targetInUnits = target * 1000;
     const dp = Array(targetInUnits + 1).fill(0);
     const choices = Array(targetInUnits + 1).fill().map(() => []);
 
     const MAX_COMBINATIONS = 100;  // Лимит на количество комбинаций
     let resultCount = 0;  // Счётчик комбинаций
+
+    // Сортировка рулонов по убыванию
+    rolls.sort((a, b) => b - a);
+
+    // Мемоизация (запоминаем уже проверенные суммы)
+    const memo = {};
 
     rolls.forEach((roll, i) => {
         const rollInUnits = roll * 1000;
@@ -280,6 +287,11 @@ details p {
             return;
         }
 
+        // Проверка, есть ли уже результат в мемоизации
+        if (memo[sum]) {
+            return memo[sum];
+        }
+
         choices[sum].forEach(({ roll, index }) => {
             if (!usedIndexes.has(index)) {
                 usedIndexes.add(index);  // Пометить рулон как использованный
@@ -287,6 +299,9 @@ details p {
                 usedIndexes.delete(index);  // Убрать отметку после рекурсивного вызова
             }
         });
+
+        // Сохраняем результат в мемоизации
+        memo[sum] = resultVariants;
     }
 
     findCombinations(bestSum, [], new Set());
